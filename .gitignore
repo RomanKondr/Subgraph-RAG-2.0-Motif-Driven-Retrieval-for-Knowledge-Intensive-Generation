@@ -2,3 +2,12 @@
 wandb
 *.pth
 retrieve/data_files
+
+# HPC outputs
+results/
+logs/
+scored_triples/
+wandb/
+*.pth
+*.pt
+*.bin
