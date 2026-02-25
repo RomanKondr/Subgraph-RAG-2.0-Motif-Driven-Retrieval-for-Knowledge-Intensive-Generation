@@ -93,6 +93,7 @@ def main():
     parser.add_argument("--prompt_mode", type=str, default="scored_100", help="Prompt mode")
     parser.add_argument("-p", "--score_dict_path", type=str)
     parser.add_argument("--llm_mode", type=str, default="sys_icl_dc", help="LLM mode")
+    parser.add_argument("--backend", type=str, default="vllm", choices=["vllm","hf","openai"], help="LLM backend")
     parser.add_argument("-m", "--model_name", type=str, default="meta-llama/Meta-Llama-3.1-8B-Instruct", help="Model name")
     # parser.add_argument("--model_name", type=str, default="gpt-4o", help="Model name")
     parser.add_argument("--split", type=str, default="test", help="Split")
@@ -105,9 +106,14 @@ def main():
     parser.add_argument("--thres", type=float, default=0.0, help="Threshold")
 
     args = parser.parse_args()
+
+    # Normalize split passed from bash: '--split \\n' becomes actual newline char
+    if isinstance(args.split, str) and args.split == "\\n":
+        args.split = "\n"
     dataset_name = args.dataset_name
     prompt_mode = args.prompt_mode
     llm_mode = args.llm_mode
+    backend = args.backend
     model_name = args.model_name
     split = args.split
     tensor_parallel_size = args.tensor_parallel_size
@@ -136,7 +142,7 @@ def main():
     raw_pred_folder_path.mkdir(parents=True, exist_ok=True)
     raw_pred_file_path = raw_pred_folder_path / f"{prompt_mode}-{llm_mode}-{frequency_penalty}-thres_{thres}-{split}-predictions-resume.jsonl"
 
-    llm = llm_init(model_name, tensor_parallel_size, max_seq_len_to_capture, max_tokens, seed, temperature, frequency_penalty)
+    llm = llm_init(model_name, tensor_parallel_size, max_seq_len_to_capture, max_tokens, seed, temperature, frequency_penalty, llm_mode=backend)
     data = get_data(dataset_name, pred_file_path, score_dict_path, split, prompt_mode)
     sys_prompt, cot_prompt = get_defined_prompts(prompt_mode, model_name, llm_mode)
     print("Generating prompts...")
