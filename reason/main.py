@@ -12,6 +12,7 @@ from llm_utils import llm_init, llm_inf_all
 
 from metrics.evaluate_results_corrected import eval_results as eval_results_corrected
 from metrics.evaluate_results import eval_results as eval_results_original
+import hashlib
 
 
 def get_defined_prompts(prompt_mode, model_name, llm_mode):
@@ -95,7 +96,6 @@ def main():
     parser.add_argument("--llm_mode", type=str, default="sys_icl_dc", help="LLM mode")
     parser.add_argument("--backend", type=str, default="vllm", choices=["vllm","hf","openai"], help="LLM backend")
     parser.add_argument("-m", "--model_name", type=str, default="meta-llama/Meta-Llama-3.1-8B-Instruct", help="Model name")
-    # parser.add_argument("--model_name", type=str, default="gpt-4o", help="Model name")
     parser.add_argument("--split", type=str, default="test", help="Split")
     parser.add_argument("--tensor_parallel_size", type=int, default=1, help="Tensor parallel size")
     parser.add_argument("--max_seq_len_to_capture", type=int, default=8192 * 2, help="Max sequence length to capture")
@@ -106,8 +106,6 @@ def main():
     parser.add_argument("--thres", type=float, default=0.0, help="Threshold")
 
     args = parser.parse_args()
-
-    # Normalize split passed from bash: '--split \\n' becomes actual newline char
     if isinstance(args.split, str) and args.split == "\\n":
         args.split = "\n"
     dataset_name = args.dataset_name
@@ -140,7 +138,8 @@ def main():
 
     raw_pred_folder_path = Path(f"./results/KGQA/{dataset_name}/SubgraphRAG/{args.model_name.split('/')[-1]}")
     raw_pred_folder_path.mkdir(parents=True, exist_ok=True)
-    raw_pred_file_path = raw_pred_folder_path / f"{prompt_mode}-{llm_mode}-{frequency_penalty}-thres_{thres}-{split}-predictions-resume.jsonl"
+    sd_tag = 'sd_none' if (score_dict_path is None or str(score_dict_path).strip()=='' ) else ('sd_' + hashlib.md5(str(score_dict_path).encode('utf-8')).hexdigest()[:8])
+    raw_pred_file_path = raw_pred_folder_path / f"{prompt_mode}-{llm_mode}-{frequency_penalty}-thres_{thres}-{split}-{sd_tag}-predictions-resume.jsonl"
 
     llm = llm_init(model_name, tensor_parallel_size, max_seq_len_to_capture, max_tokens, seed, temperature, frequency_penalty, llm_mode=backend)
     data = get_data(dataset_name, pred_file_path, score_dict_path, split, prompt_mode)
@@ -158,8 +157,6 @@ def main():
 
             each_qa["prediction"] = res[0]
             save_checkpoint(pred_file, each_qa)
-
-    # If the processing completes, rename the files to remove the "resume" flag
     final_pred_file_path = raw_pred_file_path.with_name(raw_pred_file_path.stem.replace("-resume", "") + raw_pred_file_path.suffix)
     os.rename(raw_pred_file_path, final_pred_file_path)
     eval_all(final_pred_file_path, run, subset=True)

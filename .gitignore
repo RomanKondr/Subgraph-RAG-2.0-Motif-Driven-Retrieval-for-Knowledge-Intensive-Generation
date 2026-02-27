@@ -12,3 +12,18 @@ wandb/
 *.pt
 *.bin
 reason/eval_artifacts_backup.tgz
+
+# HPC artifacts / outputs
+results/
+reason/results/
+logs/
+reason/logs/
+scored_triples/
+reason/scored_triples/
+*.pth
+*.pt
+*.bin
+*.tgz
+reason/results/
+reason/logs/
+reason/scored_triples/
