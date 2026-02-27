@@ -11,3 +11,4 @@ wandb/
 *.pth
 *.pt
 *.bin
+reason/eval_artifacts_backup.tgz
