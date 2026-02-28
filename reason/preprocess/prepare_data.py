@@ -6,6 +6,8 @@ import numpy as np
 from tqdm import tqdm
 from datasets import load_dataset
 from .prepare_prompts import unique_preserve_order
+from motif_retriever import MotifIndex
+from local_motif import local_motif_expand
 
 
 def get_subgraphs(dataset_name, split):
@@ -107,7 +109,7 @@ def sample_random_triplets(data, num_triplets, seed=0):
     return data
 
 
-def get_data(dataset_name, pred_file_path, score_dict_path, split, prompt_mode, seed=0, triplets_to_sample=[50, 100, 200, 300]):
+def get_data(dataset_name, pred_file_path, score_dict_path, split, prompt_mode, seed=0, triplets_to_sample=[50, 100, 200, 300], retriever='baseline', motif_tokens_path=None, motif_pair2trip_path=None, top_tokens=200, top_triples=300):
     with open(pred_file_path, "r") as f:
         raw_data = [json.loads(line) for line in f]
 
@@ -125,7 +127,81 @@ def get_data(dataset_name, pred_file_path, score_dict_path, split, prompt_mode, 
 
     data = add_good_triplets_from_rog(data)
     data = add_scored_triplets(data, score_dict_path, prompt_mode)
+    if retriever == "motif_tokens":
+        assert motif_tokens_path is not None and motif_pair2trip_path is not None
+        data = add_motif_triplets(data, motif_tokens_path, motif_pair2trip_path, top_tokens=top_tokens, top_triples=top_triples)
+        for each_qa in data:
+            base = each_qa.get("scored_triplets", [])
+            motif = each_qa.get("motif_triplets", [])
+
+            # keep only top baseline by score (already sorted in score dict)
+            base = base[:300]
+
+            # motif triples are 3-tuples -> wrap as 4-tuples with dummy score
+            motif_scored = [(h, r, t, -1.0) for (h, r, t) in motif]
+
+            seen = set()
+            merged = []
+            for item in base + motif_scored:
+                h, r, t, s = item
+                key = (h, r, t)
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append((h, r, t, s))
+
+            each_qa["scored_triplets"] = merged
+
+    if retriever == "local_motif":
+        # purely question-local motif closure on top-K scored_triplets
+        for each_qa in data:
+            base = each_qa.get("scored_triplets", [])
+            # add motif-closed edges/triples derived from base itself
+            extra = local_motif_expand(base, k_base=300, k_anchor=50, max_added=300)
+
+            seen = set()
+            merged = []
+            for item in base[:300] + extra:
+                h, r, t, s = item
+                key = (h, r, t)
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append((h, r, t, s))
+            each_qa["scored_triplets"] = merged
     # for num_triplets in triplets_to_sample:
     #     data = sample_random_triplets(data, num_triplets, seed)
+
+    return data
+
+def add_motif_triplets(
+    data,
+    motif_tokens_path: str,
+    motif_pair2trip_path: str,
+    top_tokens: int = 200,
+    top_triples: int = 300,
+):
+    idx = MotifIndex(motif_tokens_path, motif_pair2trip_path)
+    print("Adding motif-expanded triplets...")
+
+    for each_qa in data:
+        anchors = set()
+
+        # Use entities already present in scored_triplets as anchors (best cheap default)
+        for h, r, t, _ in each_qa.get("scored_triplets", [])[:50]:
+            if h: anchors.add(str(h))
+            if t: anchors.add(str(t))
+
+        # fallback: use RoG triplets if scored_triplets empty
+        if not anchors:
+            for h, r, t in each_qa.get("good_triplets_rog", []):
+                if h: anchors.add(str(h))
+                if t: anchors.add(str(t))
+
+        anchors = list(anchors)
+        toks = idx.get_tokens(anchors, top_tokens=top_tokens)
+        motif_triples = idx.expand_tokens(toks, top_triples=top_triples)
+
+        each_qa["motif_triplets"] = motif_triples
 
     return data
