@@ -90,11 +90,15 @@ def eval_all(pred_file_path, run, subset, split=None, eval_hops=-1):
 
 def main():
     parser = argparse.ArgumentParser(description="RAG for KGQA")
-    parser.add_argument('--retriever', type=str, default='baseline', choices=['baseline','motif_tokens','local_motif'])
+    parser.add_argument('--retriever', type=str, default='baseline', choices=['baseline', 'motif_units','motif_tokens','local_motif', "motif_token_ranked", "motif_token_learned", "motif_triangles"])
     parser.add_argument('--motif_tokens_path', type=str, default='reason/motif_index/webqsp_tokens_global.jsonl')
     parser.add_argument('--motif_pair2trip_path', type=str, default='reason/motif_index/webqsp_pair2trip.jsonl')
     parser.add_argument('--top_tokens', type=int, default=200)
     parser.add_argument('--top_triples', type=int, default=300)
+    parser.add_argument("--motif_quota", type=int, default=35,
+                        help="Number of evidence triplets reserved for motif channel in scored_* prompts")
+    parser.add_argument("--motif_show_headers", action="store_true",
+                        help="If set, add motif header lines before motif edges")
     parser.add_argument("-d", "--dataset_name", type=str, default="cwq", help="Dataset name")
     parser.add_argument("--prompt_mode", type=str, default="scored_100", help="Prompt mode")
     parser.add_argument("-p", "--score_dict_path", type=str)
@@ -144,11 +148,12 @@ def main():
     raw_pred_folder_path = Path(f"./results/KGQA/{dataset_name}/SubgraphRAG/{args.model_name.split('/')[-1]}")
     raw_pred_folder_path.mkdir(parents=True, exist_ok=True)
     sd_tag = 'sd_none' if (score_dict_path is None or str(score_dict_path).strip()=='' ) else ('sd_' + hashlib.md5(str(score_dict_path).encode('utf-8')).hexdigest()[:8])
-    raw_pred_file_path = raw_pred_folder_path / f"{prompt_mode}-{llm_mode}-{frequency_penalty}-thres_{thres}-{split}-{sd_tag}-predictions-resume.jsonl"
+    raw_pred_file_path = raw_pred_folder_path / (f"{prompt_mode}-{llm_mode}-fp_{frequency_penalty}-thres_{thres}-{split}-retr_{args.retriever}-seed_{seed}-{sd_tag}-predictions-resume.jsonl")
 
     llm = llm_init(model_name, tensor_parallel_size, max_seq_len_to_capture, max_tokens, seed, temperature, frequency_penalty, llm_mode=backend)
     data = get_data(dataset_name, pred_file_path, score_dict_path, split, prompt_mode,
                     retriever=args.retriever,
+                    motif_quota=args.motif_quota,
                     motif_tokens_path=args.motif_tokens_path,
                     motif_pair2trip_path=args.motif_pair2trip_path,
                     top_tokens=args.top_tokens,

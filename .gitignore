@@ -28,3 +28,29 @@ reason/results/
 reason/logs/
 reason/scored_triples/
 reason/motif_index/
+
+# --- generated / local ---
+reason/backups/
+reason/results_today/
+results_today/
+logs/
+wandb/
+
+# predictions / eval artifacts
+**/*predictions*.jsonl
+**/*detailed_eval_result*.jsonl
+**/*eval_*/
+**/*.pth
+**/*.pt
+
+# accidental scratch files
+reason/PY
+reason/break
+reason/from
+reason/if
+reason/import
+
+# --- local backups / broken copies ---
+reason/**/*.bak*
+reason/**/*.BAK_*
+reason/**/*.BROKEN_*
