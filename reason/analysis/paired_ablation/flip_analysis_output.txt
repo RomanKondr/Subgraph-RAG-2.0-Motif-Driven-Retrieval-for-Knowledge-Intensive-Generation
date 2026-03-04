@@ -1,0 +1,27 @@
+A_DET: results/KGQA/webqsp/SubgraphRAG/Meta-Llama-3.1-8B-Instruct/eval_N500_tri_a0_lam005_topKonly_fp036/scored_100-sys_icl_dc-0.36-thres_0.0-test-detailed_eval_result.jsonl
+B_DET: results/KGQA/webqsp/SubgraphRAG/Meta-Llama-3.1-8B-Instruct/eval_N500_tri_a0_lam005_NOTopK_fp036_paired_from_saved/scored_100-sys_icl_dc-0.36-thres_0.0-test-detailed_eval_result.jsonl
+common: 500
+
+HIT flips (hit==1):
+topK-only correct -> non-topK wrong: 7
+topK-only wrong -> non-topK correct: 13
+same: 480
+
+EM flips (acc==1.0):
+topK-only EM -> non-topK not-EM: 11
+topK-only not-EM -> non-topK EM: 11
+same: 478
+
+Examples HIT: topK-only correct -> non-topK wrong (up to 5)
+- WebQTest-119 | gt: ['Brenda Song'] | topK(hit,acc): 1 1.0 | nonTop(hit,acc): 0 0.0
+- WebQTest-234 | gt: ['Panama'] | topK(hit,acc): 1 1.0 | nonTop(hit,acc): 0 1.0
+- WebQTest-528 | gt: ['US President'] | topK(hit,acc): 1 1.0 | nonTop(hit,acc): 0 1.0
+- WebQTest-532 | gt: ['Football'] | topK(hit,acc): 1 1.0 | nonTop(hit,acc): 0 1.0
+- WebQTest-58 | gt: ['UCLA Bruins football'] | topK(hit,acc): 1 1.0 | nonTop(hit,acc): 0 0.0
+
+Examples HIT: topK-only wrong -> non-topK correct (up to 5)
+- WebQTest-1 | gt: ['Speaker of the United States House of Representatives', 'United States Representative', 'Governor of Tennessee'] | topK(hit,acc): 0 0.0 | nonTop(hit,acc): 1 1.0
+- WebQTest-116 | gt: ['Canada'] | topK(hit,acc): 0 1.0 | nonTop(hit,acc): 1 1.0
+- WebQTest-13 | gt: ['Lyndon B. Johnson'] | topK(hit,acc): 0 1.0 | nonTop(hit,acc): 1 1.0
+- WebQTest-214 | gt: ['North Africa', 'Middle East', 'Europe'] | topK(hit,acc): 0 0.0 | nonTop(hit,acc): 1 0.3333333333333333
+- WebQTest-261 | gt: ['Visual Artist', 'Film director', 'Photographer', 'Artist'] | topK(hit,acc): 0 1.0 | nonTop(hit,acc): 1 1.0

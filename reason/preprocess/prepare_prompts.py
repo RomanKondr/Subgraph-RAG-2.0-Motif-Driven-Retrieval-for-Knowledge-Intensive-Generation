@@ -36,12 +36,10 @@ def merge_tuples(tuple_list, mode=0):
     if mode == 0:
         merged_dict = defaultdict(lambda: [[], None, None])
         for t in tuple_list:
-            key = (t[1], t[2])  # Group by the second and third elements
-            merged_dict[key][0].append(t[0])  # Append the first element to the list
-            merged_dict[key][1] = t[1]  # Set the second element
-            merged_dict[key][2] = t[2]  # Set the third element
-
-        # Convert the dictionary back to a list of merged tuples
+            key = (t[1], t[2])
+            merged_dict[key][0].append(t[0])
+            merged_dict[key][1] = t[1]
+            merged_dict[key][2] = t[2]
         return [('[' + ','.join(v[0]) + ']', v[1], v[2]) for v in merged_dict.values()]
     else:
         assert mode == 2
@@ -63,22 +61,31 @@ def get_prompts(each_qa, mode, sys_prompt, cot_prompt, thres, seed=0):
         num_sampled_triplets = int(mode.split('_')[1])
         good_triplets_rog = each_qa['good_triplets_rog']
         input_triplets = remove_same_head_tail(good_triplets_rog, mode)
-        # sampled_triplets = np.array(each_qa[f'sampled_triplets_{num_sampled_triplets}'])
-        # input_triplets = np.concatenate([good_triplets_rog, sampled_triplets]) if len(good_triplets_rog) > 0 else sampled_triplets
+
         input_triplets = [triplet_to_str(triplet) for triplet in input_triplets]
         other_triplets = remove_same_head_tail(each_qa['scored_triplets'], mode)
         other_triplets = [triplet_to_str(triplet) for triplet in other_triplets]
         input_triplets = unique_preserve_order(input_triplets + other_triplets)
         input_triplets = input_triplets[:num_sampled_triplets]
-        # input_triplets = np.random.permutation(input_triplets)
         triplet_prompt = "Triplets:\n" + "\n".join(input_triplets)
+
     elif 'scored' in mode:
         num_sampled_triplets = int(mode.split('_')[1])
         input_triplets = each_qa['scored_triplets']
+
+        # Normalize to 3-tuples for prompt text
         if thres:
-            input_triplets = [(triplet[0], triplet[1], triplet[2]) for triplet in input_triplets if triplet[3] >= thres]
+            # if scores exist, filter; otherwise just take first 3 fields
+            tmp = []
+            for t in input_triplets:
+                if len(t) >= 4:
+                    if float(t[3]) >= thres:
+                        tmp.append((t[0], t[1], t[2]))
+                elif len(t) >= 3:
+                    tmp.append((t[0], t[1], t[2]))
+            input_triplets = tmp
         else:
-            input_triplets = [(triplet[0], triplet[1], triplet[2]) for triplet in input_triplets]
+            input_triplets = [(t[0], t[1], t[2]) for t in input_triplets if len(t) >= 3]
 
         input_triplets = unique_preserve_order(input_triplets)
         input_triplets = input_triplets[:num_sampled_triplets]
@@ -98,6 +105,7 @@ def get_prompts(each_qa, mode, sys_prompt, cot_prompt, thres, seed=0):
         input_triplets = unique_preserve_order([triplet_to_str(triplet) for triplet in input_triplets])
         input_triplets = input_triplets[:num_sampled_triplets]
         triplet_prompt = "Triplets:\n" + "\n".join(input_triplets)
+
     elif 'noevi' in mode:
         triplet_prompt = ''
     else:
@@ -116,6 +124,9 @@ def get_prompts(each_qa, mode, sys_prompt, cot_prompt, thres, seed=0):
     each_qa['user_query'] = user_query
     each_qa['all_query'] = all_query
     each_qa['cot_query'] = cot_prompt
+
+    # Important: unify with forks that read each_qa["input"]
+    each_qa["input"] = all_query
     return each_qa
 
 
