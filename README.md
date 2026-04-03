@@ -123,16 +123,6 @@ The main difference in this fork is the addition of motif-aware retrieval varian
 - motif-unit scoring
 - quota-based prompt packing
 
-## Frequently Asked Questions (FAQ)
-
-### Is this a full replacement for the original SubgraphRAG?
-No. This repository is a research extension built on top of the original SubgraphRAG framework.
-
-### What was the best-performing motif variant?
-The strongest result came from **motif-units packing with quota = 35**.
-
-### What was the main negative result?
-Replacing baseline evidence with motif-expanded triples caused a major performance collapse, showing that motifs cannot simply substitute the original high-precision retrieval signal.
 
 ## Citation
 
